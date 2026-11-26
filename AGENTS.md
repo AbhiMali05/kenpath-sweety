@@ -1,61 +1,92 @@
-# Repository guidance for coding agents
+# Sweety — Agent Handover and Development Rules
 
-## Project identity and boundaries
+## Project overview
 
-Sweety is Kenpath Technologies' recruitment assessment: a personal blood-glucose tracker built with React/Vite, Node.js/Express (JavaScript ES modules), Prisma 7, PostgreSQL, bcrypt, JWT, Vitest, and Supertest. This is a demonstration app, not medical software. Read [README.md](README.md) for product requirements, setup, endpoint details, and status. Implement only the feature or stage requested by the user; do not start later work automatically.
+Sweety is Kenpath Technologies' recruitment assessment: a personal blood-glucose tracker for registration, sign-in, per-user readings, and date-based summaries. It is a demonstration app, not a medical device. Original requirements are preserved in [Sweety_README.md](Sweety_README.md); implementation and setup status are in [README.md](README.md).
 
-## Required context before changes
-
-Read README.md and this file, inspect relevant source/tests, inspect Git status, and identify existing behavior and conventions before editing. Do not assume a file's contents without opening it. Preserve working features and unrelated user changes.
+Stack: React 19, Vite 8, React Router 7, Axios, JavaScript ES modules; Node.js 22, Express 5, Prisma 7, PostgreSQL 19, `pg` adapter, bcrypt and JWT. Backend tests use Vitest and Supertest; client tests use Vitest 5, React Testing Library, user-event, jest-dom and jsdom. Client and server test dependencies are installed and lockfiles are synchronized.
 
 ## Architecture
 
-- `client/src/api/`: HTTP client and API helpers.
-- `client/src/components/`: reusable UI, with `common/` and `layout/` subdivisions.
-- `client/src/features/{auth,readings,reports}/`: feature-specific screens and client logic.
-- `client/src/hooks/`, `client/src/styles/`: shared hooks and styles.
-- `server/src/app.js`, `index.js`: Express configuration and process startup.
-- `server/src/config/`: shared configuration and the single Prisma Client.
-- `server/src/middleware/`: cross-cutting request handling, including authentication.
-- `server/src/modules/{auth,readings,reports}/`: feature routes, controllers, validation, and services.
-- `server/src/utils/`: small shared helpers.
-- `server/prisma/schema.prisma`, `migrations/`: PostgreSQL data model and versioned schema changes.
-- `server/tests/`: automated backend tests.
+- Browser: `client/src/main.jsx` mounts React Router and `AuthProvider`. `features/auth/` owns login, registration, and session state. `routes/ProtectedRoute.jsx` protects user pages. `features/readings/` and `features/reports/` own their screens.
+- API flow: pages call feature helpers in `client/src/api/`; one Axios client handles the API base URL, bearer token, safe errors, and unauthorized-session event. The browser never connects to PostgreSQL.
+- Server: `server/src/index.js` loads dotenv and listens; `app.js` configures middleware and mounts feature routers. Routes apply authentication/validation, controllers translate HTTP, and services implement business and persistence logic.
+- Database: one shared Prisma Client in `server/src/config/database.js` uses Prisma's PostgreSQL driver adapter. `User` has many `GlucoseReading` records. `ReadingSlot` has four values; reading dates are PostgreSQL `DATE`. Unique email, `(userId, readingDate, slot)`, `(userId, readingDate)`, foreign key, and value range check constraints enforce data rules. Reports aggregate in the backend and are always scoped by verified user ID.
+- Authentication: API hashes passwords with bcrypt and signs JWTs. The client keeps one token in `sessionStorage`, restores the profile through `/api/auth/me`, and clears invalid sessions on a 401. Browser JavaScript can read session storage; an XSS issue could expose the token.
 
-Routes bind URL/middleware, controllers handle HTTP input/output, validation rejects malformed input, and services contain business rules and Prisma access.
+## Repository structure
 
-## Coding conventions
+```text
+client/
+  src/api/                    shared Axios client and endpoint helpers
+  src/components/common/      loading, error, and empty states
+  src/components/layout/      brand, header, navigation, shell
+  src/features/auth/          auth context, login/register, tests
+  src/features/readings/      reading workflow and tests
+  src/features/reports/       report workflow and tests
+  src/routes/                 route protection and not-found page
+  src/test/                   Vitest setup
+  src/utils/                  date-only helpers and tests
+  App.css, index.css          shared UI and responsive styles
+  vitest.config.js            jsdom test configuration
+server/
+  prisma/                     Prisma schema and initial migration
+  src/config/                 shared database client and read-only checks
+  src/middleware/             auth middleware
+  src/modules/{auth,readings,reports}/ routes, controllers, validation, services
+  tests/                      mocked-Prisma API tests
+AGENTS.md                     persistent agent handover
+README.md                     setup, API, status, and roadmap
+Sweety_README.md              original assignment requirements
+```
 
-Use JavaScript ES modules and existing naming/response patterns. Keep controllers focused, business logic in services, and validation separate where useful. Reuse shared configuration and avoid duplicate logic, unnecessary dependencies, premature optimization, and abstractions that obscure straightforward behavior. Prefer clear code.
+## Development conventions
 
-## Database rules
+- Keep the existing client/server structure and use JavaScript ES modules. React components use PascalCase filenames; API helpers and utilities use camelCase.
+- Keep backend routes, validation, controllers, and services in their established roles. Keep one shared Prisma client. Do not add endpoints unless required to fix a concrete defect.
+- Call APIs through `client/src/api/client.js`; keep UI validation helpful but retain backend validation as the source of truth. Do not duplicate report calculations in the browser.
+- Preserve `YYYY-MM-DD` calendar values without timezone conversion. The server uses UTC calendar boundaries for future-date validation and report ranges.
+- Keep loading, error, empty, success, and disabled states accessible. Use native labels/buttons, visible focus, meaningful live status, and reduced-motion support. Do not convey status by color alone.
+- Never store passwords in browser storage or log passwords, tokens, hashes, secrets, connection strings, or raw SQL details. Keep local `.env` values untouched; only expose safe placeholders in examples. Check `.gitignore` before adding config files.
+- Client tests mock API helpers and never connect to PostgreSQL. Backend tests mock Prisma. Distinguish these from real database integration and browser/E2E checks.
 
-PostgreSQL is required and Prisma is the ORM. Reuse the shared Prisma Client; never create one per request. Preserve database constraints and use migrations for schema changes. Never reset a database, delete existing data, or modify an unrelated database automatically. Destructive data/schema changes require explicit user approval.
+## Implementation history and evidence
 
-## Security rules
+Stage names and objectives below were checked against the retained stage prompts and commit history. Historical command-by-command verification logs were not retained in the repository; only evidence explicitly available is stated.
 
-Never commit `.env` files or expose database credentials/JWT secrets. Never log passwords, password hashes, or JWTs. Hash passwords with bcrypt; verify JWTs on protected routes; derive identity only from verified claims. Scope every user-specific read and mutation to the authenticated user, never a client-supplied user ID. Never return `passwordHash` or expose SQL errors/stack traces to clients.
+| Stage | Objective and implementation | Verification / remaining limitations |
+| --- | --- | --- |
+| 1 — Project inspection, structure, and Express foundation | Established the existing React/Vite and Express applications, repository layout, environment examples, initial documentation, and Express startup foundation. | Commits `02d9641`, `54d45de`, `ffee8ec` are present. Historic detailed checks are unavailable. |
+| 2 — PostgreSQL + Prisma database implementation | Added Prisma 7 schema, PostgreSQL adapter/shared client, CLI config, initial migration, and read-only database inspection/connection helpers. | Migration is committed; applying/verifying against real PostgreSQL remains pending for Stage 9. |
+| 3 — User authentication backend | Added registration/login/profile endpoints, bcrypt/JWT behavior, and backend test coverage. | Later backend suite contains auth tests; live DB integration is pending. |
+| 4 — Glucose readings CRUD + validation + AGENTS.md | Added authenticated reading list/create/update/delete, date/slot/value validation, ownership scoping, and root agent instructions. | Later backend suite contains mocked-Prisma reading tests; live DB integration is pending. |
+| 5 — Daily, month-to-date and monthly reporting backend | Added authenticated daily and monthly report endpoints and backend-calculated statistics. | Later backend suite contains mocked-Prisma report tests; live DB integration is pending. |
+| 6 — React frontend foundation, routing, layout and API configuration | Added the React route/layout foundation and frontend/API boundaries. | Commit `dd47347` replaced much of the starter UI with the current frontend; no browser verification is recorded before Stage 8. |
+| 7 — Frontend feature implementation | Implemented login/register/session restoration, protected pages, readings CRUD UI, and the three report views. | Stage 7 reported client lint/build and 55 mocked backend tests passing. No PostgreSQL or end-to-end verification. |
+| 8 — UI/UX refinement, frontend testing and code quality audit | Improved responsive auth layouts, contrast, focus and touch targets; protected duplicate form submissions synchronously; added 23 frontend behavior tests. | npm install and clean `npm ci` pass; client lock is synchronized. Frontend tests pass 23/23, lint/build pass, and backend tests pass 55/55. Login and registration were visually checked at 320, 375, 390, 768, 1024 and 1440px with no horizontal overflow. Keyboard focus, password toggle, validation, and sampled text contrast were checked. Protected readings/reports visual checks require a real authenticated session and are deferred to Stage 9. No database operation was performed. Stage 8 is complete for its scope. |
 
-## Date handling
+## Current status and limitations
 
-Reading dates are calendar dates in exact `YYYY-MM-DD` form and PostgreSQL `DATE`, not timestamps. Preserve the calendar date without timezone shifts. Follow the README's UTC convention for future-date checks and test date boundaries.
+- Implemented: registration/login, token session restoration/logout, protected routes, per-user reading CRUD, daily/month-to-date/previous-month backend reports, responsive UI, backend validation, Prisma schema/migration, backend mocked tests, and frontend test source.
+- Stage 8 verified here: clean client `npm ci`, 23/23 frontend tests, client lint, client production build, and 55/55 backend tests pass. Build output: 343.24 kB JS (109.81 kB gzip), 14.57 kB CSS (4.05 kB gzip). Compared with the earlier Stage 8 build, JS is unchanged; CSS increased 0.07 kB and gzip 0.01 kB for contrast/touch-target refinements.
+- Responsive browser checks: login and registration passed no-overflow checks at 320, 375, 390, 768, 1024 and 1440px. Screenshots were inspected at mobile and desktop sizes. Readings/reports screens and their loading/error/empty browser states need an authenticated session and remain for Stage 9; component behavior is covered by mocked frontend tests.
+- Browser connectivity: Vite is listening on `::1:5173`; `http://localhost:5173/login` responds with HTTP 200 and loads in the browser tool. `127.0.0.1:5173` is not bound in this run. npm uses the official registry with no npm or HTTP proxy configured; registry access works with approved network permission, while sandbox DNS alone produced `ENOTFOUND`.
+- No live PostgreSQL, migration, or real API integration was run. These remain Stage 9 tasks.
+- Stage 8 dependency investigation: npm 10.9.2 inside the ordinary sandbox could not resolve registry DNS; elevated `npm ping` returned PONG and DNS/TCP checks passed. With network available, npm 10's Arborist peer-set resolver threw `Cannot read properties of null (reading 'edgesOut')` while installing Vitest 4. The client runner was aligned to Vitest 5.1.2, already used by the backend and compatible with Node 22.13.1 / Vite 8; `npm install` then completed, `npm ci` reproduced the install, and package manifest/lock were verified synchronized. `npm audit` reports zero vulnerabilities.
+- Known security limitation: JWT in `sessionStorage` is readable by JavaScript. The app is not approved for real health-data use and has no clinical interpretation.
+- Sampled auth-page foreground/background contrast ratios are at least 4.67:1 after Stage 8 fixes. This is not a formal WCAG audit.
 
-## Testing requirements
+## Roadmap
 
-Before declaring work complete, run relevant tests, preserve existing behavior, and add tests for business rules, invalid inputs, authorization, and edge cases. Verify HTTP behavior when possible. Distinguish mocked tests from real database integration checks and never claim an unrun check passed.
+- **Stage 9 — Local PostgreSQL setup and integration verification:** verify local database identity, inspect migration status, verify/apply the existing Prisma migration without reset, run real authenticated backend/API and frontend integration workflows, and confirm user-specific data isolation. Do not begin until explicitly requested.
+- **Stage 10 — Final assignment audit and submission preparation:** audit requirements, fix remaining defects, finalize documentation, assess submission readiness, and prepare interview answers. Do not begin until Stage 9 is complete and requested.
 
-## Git rules
+## Instructions for future agents
 
-Inspect status before editing. Preserve history; do not commit, push, change repository visibility, or stage secrets automatically. Review the diff. Do not run destructive Git commands without explicit permission. Suggest meaningful feature-based commit messages when useful.
-
-## Documentation
-
-Update README.md when APIs, setup, or behavior change. Keep implemented and planned work distinct; document assumptions, decisions, and test commands. Preserve useful future scope and repository-rights information. Keep these agent instructions concise instead of copying the README.
-
-## Workflow and handoff
-
-Work through: Inspect → Plan → Implement → Test → Review → Document → Report. Finish only the requested scope. Report changes, created/modified files, executed tests and results, technical decisions, limitations, remaining tasks, and a suggested commit message.
-
-## Known concerns to re-check
-
-Node watch-mode startup behavior and npm audit findings in Prisma's dependency chain were observed previously. Treat these as items to verify against current state, not confirmed defects. Do not change working configuration or install/update packages solely based on historical notes; inspect current evidence first.
+1. Read all of `AGENTS.md` and `README.md` before starting; review the original requirements when relevant.
+2. Inspect implementation, tests, and Git status before editing. Preserve completed functionality and uncommitted work.
+3. Respect the explicitly requested stage boundary. Do not start the next stage automatically.
+4. Run relevant verification commands; never describe an unrun check as passed.
+5. Update both `AGENTS.md` and `README.md` after each stage. Keep the entire roadmap and historic status accurate; label unavailable evidence as unverified.
+6. Report actual results, failures, limitations, and blockers. Do not expose secrets or credentials.
+7. Do not automatically commit, push, reset, or perform destructive database operations. Do not run migrations, seed data, or live PostgreSQL checks unless the active stage explicitly requests them.

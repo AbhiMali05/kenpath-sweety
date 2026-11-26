@@ -6,7 +6,7 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   --ink: #26332f;
-  --muted: #718078;
+  --muted: #5f6e65;
   --line: #e5ebe7;
   --paper: #fff;
   --canvas: #f6f8f6;
@@ -23,5 +23,5 @@ body { min-width: 320px; min-height: 100vh; margin: 0; }
 button, input, textarea, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 a { color: inherit; }
-button:focus-visible, a:focus-visible { outline: 3px solid #8bc6b2; outline-offset: 3px; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #5c9a80; outline-offset: 2px; }
 ::selection { background: #dcece5; color: var(--ink); }

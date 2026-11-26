@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getApiErrorMessage } from '../../api/client.js';
 import Brand from '../../components/layout/Brand.jsx';
@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [requestError, setRequestError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionLock = useRef(false);
 
   function validate() {
     const next = {};
@@ -30,7 +31,8 @@ export default function LoginPage() {
   async function handleSubmit(event) {
     event.preventDefault();
     setRequestError('');
-    if (isSubmitting || !validate()) return;
+    if (submissionLock.current || !validate()) return;
+    submissionLock.current = true;
     setIsSubmitting(true);
     try {
       await login({ email: values.email.trim(), password: values.password });
@@ -42,6 +44,7 @@ export default function LoginPage() {
     } catch (error) {
       setRequestError(error?.userMessage || error?.message || getApiErrorMessage(error));
     } finally {
+      submissionLock.current = false;
       setIsSubmitting(false);
     }
   }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getApiErrorMessage } from '../../api/client.js';
 import { registerAccount } from '../../api/authApi.js';
@@ -14,6 +14,7 @@ export default function RegisterPage() {
   const [requestError, setRequestError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionLock = useRef(false);
 
   function validate() {
     const next = {};
@@ -31,7 +32,8 @@ export default function RegisterPage() {
   async function handleSubmit(event) {
     event.preventDefault();
     setRequestError('');
-    if (isSubmitting || !validate()) return;
+    if (submissionLock.current || !validate()) return;
+    submissionLock.current = true;
     setIsSubmitting(true);
     try {
       await registerAccount({ name: values.name.trim(), email: values.email.trim(), password: values.password });
@@ -39,6 +41,7 @@ export default function RegisterPage() {
     } catch (error) {
       setRequestError(error?.userMessage || getApiErrorMessage(error));
     } finally {
+      submissionLock.current = false;
       setIsSubmitting(false);
     }
   }
