@@ -14,18 +14,23 @@ PostgreSQL is the selected database; MongoDB is not used.
 
 ## Architecture and current structure
 
-The repository is a modular monolith with separate client and server applications. Express configuration is exported from `server/src/app.js`; `server/src/index.js` loads environment variables and starts the HTTP listener. Feature code will live under module/feature folders as it is implemented.
+The repository is a modular monolith with separate client and server applications. Express configuration is exported from `server/src/app.js`; `server/src/index.js` loads environment variables and starts the HTTP listener. The React application uses React Router, feature folders, shared layout/components, one Axios client, and an auth context.
 
 ```text
 client/
-  src/api/                    HTTP client and API utilities (planned)
-  src/components/common/      reusable UI (planned)
-  src/components/layout/      layout UI (planned)
-  src/features/auth/          authentication screens/logic (planned)
-  src/features/readings/      reading management UI (planned)
-  src/features/reports/       reports UI (planned)
-  src/hooks/                  shared hooks (planned)
-  src/styles/                 shared styling (planned)
+  src/api/client.js           shared Axios instance and token handling
+  src/api/authApi.js          account registration request
+  src/api/readingsApi.js      readings CRUD requests
+  src/api/reportsApi.js       report requests
+  src/components/common/      loading, error, and empty states
+  src/components/layout/      brand, header, navigation, authenticated shell
+  src/features/auth/          session context, login, and registration
+  src/features/readings/      date-filtered readings CRUD UI
+  src/features/reports/       daily/month-to-date/previous-month UI
+  src/routes/                 protected route and not-found page
+  src/hooks/                  shared hooks (reserved)
+  src/styles/                 shared styling (reserved)
+  src/utils/dates.js          local-date input and UTC-safe display formatting
   .env.example
 server/
   prisma/                     schema and initial migration
@@ -83,6 +88,12 @@ All report endpoints require `Authorization: Bearer <token>` and exactly one `da
 Every query filters on the verified user's ID and an inclusive start/exclusive next-day boundary. PostgreSQL aggregation returns maximum, minimum, average, and count; average is a numeric value rounded to one decimal. Empty periods return HTTP 200, `count: 0`, null maximum/minimum/average, and a friendly message. Daily additionally returns individual readings in enum slot order and serializes dates as `YYYY-MM-DD`.
 
 Example: `GET /api/reports/daily?date=2026-10-15` returns `data.reportType`, `data.selectedDate`, `data.dateRange`, `data.statistics` (`highest`, `lowest`, `average`, `count`) and `data.readings`. Monthly reports return the same range and statistics fields without individual readings. The `userId` + `readingDate` index supports these scoped range queries.
+
+## Frontend application (Stages 6–7)
+
+React Router defines `/`, `/login`, `/register`, protected `/readings` and `/reports`, plus an accessible not-found route. Protected paths render only after session initialization verifies a stored token with `GET /api/auth/me`. `/` and public auth pages redirect according to session state; protected redirects retain the intended path in router state. Login and registration submit to the existing API. The readings page fetches the current user's readings, filters by a selected local calendar date, and supports create, edit, and delete. The reports page calls the existing daily, month-to-date, and previous-month endpoints; statistics are displayed as returned by the backend.
+
+`client/src/api/client.js` centralizes Axios configuration, reads `VITE_API_BASE_URL`, uses a 10-second timeout, attaches only JWT-shaped tokens, preserves backend validation messages, and reports network/server failures in user-safe language. A 401 on an authenticated request clears the session and notifies the auth context. Auth uses one `sessionStorage` key so the session survives reloads in the same tab. Browser JavaScript can read sessionStorage, so XSS could expose a token; a production healthcare system needs a stronger session-security design. Passwords are never stored in browser storage. The readings date input uses the user's local calendar date; API date strings are passed through without converting them through UTC. Report dates are formatted as UTC calendar dates to match the backend's date-only contract.
 
 ## Authentication API (implemented)
 
@@ -163,13 +174,15 @@ npm run lint
 npm run build
 ```
 
+Frontend commands run from `client/`: `npm install`, `npm run dev`, `npm run lint`, and `npm run build`. Set the non-secret `VITE_API_BASE_URL` in `client/.env` only when it differs from the local API default; `.env.example` documents the expected value.
+
 Database commands (from `server/`): `npm run prisma:validate`, `npm run prisma:generate`, `npm run prisma:status`, `npm run prisma:migrate`, `npm run db:inspect`, and `npm run db:verify`. Migration applies changes; inspect generated SQL and confirm the local target first. Do not use reset commands. `db:verify` executes read-only `SELECT 1`; `db:inspect` prints database identity and public table names, never credentials. Run all isolated backend auth/readings/report tests with `npm test`; Prisma is mocked so tests do not write to the development database. See [AGENTS.md](AGENTS.md) for permanent repository instructions for coding agents.
 
 ## Current implementation status
 
-- Implemented: existing React/Vite starter; Express JSON parsing, configurable CORS, `GET /api/health`, unknown-route JSON 404, separated app/startup modules; Prisma 7 schema/client setup; registration, login, JWT middleware, authenticated profile, authenticated glucose-reading CRUD, and daily/month-to-date/previous-month reports.
-- Pending verification: real PostgreSQL-backed integration/manual checks for Stage 4 reading CRUD and Stage 5 reporting. Automated API tests use mocked Prisma and do not establish live database behavior.
-- Planned: frontend authentication/readings/report features, seed data, and submission demo assets.
+- Implemented: responsive React/Vite frontend with routing, account registration/login, session restoration, readings CRUD, and daily/month-to-date/previous-month report views; Express APIs, Prisma 7 schema/client, and backend tests.
+- Pending verification: manual browser/API checks against a running backend and real PostgreSQL integration for readings and reports. Backend automated API tests use mocked Prisma and do not establish live database behavior.
+- Planned: seed data, any remaining polish, and submission demo assets.
 
 ## Assumptions and technical decisions
 
