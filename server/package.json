@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "node --watch src/index.js",
+    "test": "vitest run",
+    "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "db:verify": "node src/config/verifyDatabase.js",
     "db:inspect": "node src/config/inspectDatabase.js",
@@ -28,5 +28,10 @@
     "pg": "^8.23.1",
     "prisma": "^7.10.1"
   },
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "nodemon": "^3.1.14",
+    "supertest": "^7.3.2",
+    "vitest": "^5.1.2"
+  }
 }
