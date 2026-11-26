@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.js",
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "db:verify": "node src/config/verifyDatabase.js",
