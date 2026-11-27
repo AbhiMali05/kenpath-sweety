@@ -254,8 +254,8 @@ Authenticated responsive results (not run):
 - Dependency review: `npm audit` reported 0 vulnerabilities for client and server. The server lockfile no longer resolves the vulnerable nodemon/minimatch chain; `effect` resolves to 3.22.1.
 - Browser: successful registration, duplicate rejection, invalid login feedback, valid demo login, restored session after refresh, reading create/update/delete, three report periods, logout, and protected-route redirect. Readings and reports had no horizontal overflow at 320, 375, 390, 768, 1024, or 1440px. Invalid-token manipulation in the browser was not performed.
 - Submission evidence: `docs/screenshots/01-login.png`, `02-readings-dashboard.png`, `03-reports-desktop.png`, and `04-reports-mobile.png` are captured from the real local application and reviewed. No demo video was recorded. Clean-machine setup was not independently verified in a separate environment, but the README setup steps were checked against the available scripts.
-- Repository: `https://github.com/AbhiMali05/kenpath-sweety`, branch `main`, latest committed code `aa6ebac`. An unauthenticated GitHub API request returned 404, so public visibility/access could not be verified; ensure Kenpath reviewers have access. Stage 10 changes are uncommitted and unpushed pending developer review.
-- Readiness: the application checks pass. Submission is pending the Stage 10 commit/push and confirmation that Kenpath reviewers can access the repository. A separate clean-machine install and browser token tampering were not performed; those are documented confidence gaps, not application blockers (the backend/API token tests passed).
+- Repository: `https://github.com/AbhiMali05/kenpath-sweety`, branch `main`. Stage 10 was committed and pushed. Anonymous requests returned HTTP 200 for the repository, source tree, screenshots, commit history, and raw README, confirming public access.
+- Readiness: **READY FOR SUBMISSION**. The final Stage 10 changes are pushed to `main`, and the repository contents are anonymously visible. A separate clean-machine install and browser token tampering were not performed; these are documented confidence gaps, not blockers (the backend/API token tests passed).
 
 ## Security and known limitations
 
@@ -281,9 +281,9 @@ The stage names below were cross-checked against the retained stage prompts. His
 | 7 | Frontend auth, readings and reports features | Implemented; previous client lint/build and 55 mocked backend tests were recorded; live integration pending |
 | 8 | UI/UX refinement, responsive/accessibility audit, frontend tests and code quality | **Complete for Stage 8.** 23 frontend and 55 backend tests pass; lint/build pass; login/register checked at six widths. Protected page browser checks are deferred to Stage 9. |
 | 9 | Local PostgreSQL and Prisma migration verification, real API/UI integration, user data isolation, end-to-end workflow | **PASS WITH LIMITATION.** Database, API, persistence, isolation and responsive browser workflows passed. Browser-side invalid/expired token manipulation remains unverified; API coverage passed. |
-| 10 | Final assignment audit, remaining fixes, final documentation, readiness and interview preparation | **Complete; commit/push and reviewer-access confirmation pending.** Regression, seed, dependency, browser, screenshot, docs, and requirements audits passed. A separate clean-environment setup was not run. |
+| 10 | Final assignment audit, remaining fixes, final documentation, readiness and interview preparation | **Complete.** Regression, seed, dependency, browser, screenshot, docs, and requirements audits passed; changes are pushed and anonymous GitHub access was verified. A separate clean-environment setup was not run. |
 
-Current verdict: **READY FOR SUBMISSION after the Stage 10 commit/push and repository-access check.** A clean-machine setup run was not performed and is not treated as a blocker; browser invalid/expired token behavior passed at the API/backend level. Repository visibility was not changed.
+Current verdict: **READY FOR SUBMISSION.** A clean-machine setup run was not performed and is not treated as a blocker; browser invalid/expired token behavior passed at the API/backend level. Repository visibility was not changed.
 
 ## Future scope (not part of current stages)
 
