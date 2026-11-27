@@ -58,6 +58,7 @@ server/
   src/middleware/              JWT authentication
   src/modules/{auth,readings,reports}/ routes, controllers, validation, services
   tests/                       API tests with mocked Prisma
+docs/screenshots/               reviewed application screenshots
 AGENTS.md                      handover and permanent development conventions
 README.md                      setup, API, verification and roadmap
 Sweety_README.md               original assignment brief and checklist
@@ -67,14 +68,33 @@ Sweety_README.md               original assignment brief and checklist
 
 Use Node.js 22.13.1 (Node 22.12+), npm, PostgreSQL, and Git. The verified local setup uses PostgreSQL 19.0 and a dedicated development database named `sweety_db` on `127.0.0.1:5432`. The database name, host, service, and port were verified during Stage 9; credentials remain private in the ignored `server/.env` file.
 
+Use `npm ci` from each app directory to install the versions in its lockfile. For a clean local setup, first create a dedicated development database, configure `server/.env` from the placeholder example, and verify that `DATABASE_URL` targets that local database. Then:
+
 ```powershell
+# Backend dependencies and generated Prisma Client
 cd server
-npm install
-cd ..\client
-npm install
-# Reproducible client install after package-lock.json is checked in
 npm ci
+npx prisma generate
+
+# Only for a fresh, dedicated local Sweety database whose host and name you verified:
+npx prisma migrate deploy
+
+# Optional fictional sample account/data; set private demo credentials as documented below
+npm run db:seed
+
+# Start API
+npm run dev
 ```
+
+In a second terminal, start the frontend:
+
+```powershell
+cd client
+npm ci
+npm run dev
+```
+
+Never run `migrate deploy` against an unknown, shared, or production database. It applies migrations and changes the target schema. The verified local `sweety_db` already has the initial migration applied; no migration was run during Stage 10. The clean-machine commands above were reviewed but not run against a separate environment.
 
 Client test versions verified with Node.js 22.13.1 and React 19 / Vite 8: Vitest 5.1.2, React Testing Library 16.3.3, user-event 14.6.13, jest-dom 6.9.1, and jsdom 27.4.0. `npm install` and a clean `npm ci` completed; the client lockfile matches its manifest. `npm audit` reported zero vulnerabilities.
 
@@ -114,7 +134,7 @@ cd client
 npm run dev
 ```
 
-The server health endpoint is `GET /api/health`. Starting the UI does not apply migrations. Do not reset, recreate, or seed a database.
+The server health endpoint is `GET /api/health`. Starting the UI does not apply migrations. Never reset or recreate the database. Optional local demo seeding is documented below and is guarded to the local `sweety_db` target.
 
 ## Database and Prisma commands
 
@@ -132,6 +152,20 @@ npx prisma migrate deploy
 ```
 
 For a fresh dedicated local Sweety database, validate and generate the client, inspect the target and migration SQL, then apply committed migrations with `npx prisma migrate deploy`. `npm run prisma:migrate` runs `prisma migrate dev` and can change the database. Confirm the host, port, database, environment, current tables/data, and reviewed SQL before either command. Never use reset or destructive synchronization commands. `db:inspect`, `db:verify`, `prisma:validate`, and `prisma:status` are read-only checks.
+
+### Optional fictional demo data
+
+`server/prisma/seed.js` creates a fictional `Sweety Demo Account` and five sample readings. It is opt-in, refuses non-local hosts/databases, and uses `createMany(skipDuplicates)` so reruns do not duplicate readings. It never logs the password or database URL. Configure a local demo email and a password of at least 12 characters in the current PowerShell session, then run:
+
+```powershell
+$env:SWEETY_SEED_DEMO_DATA = '1'
+$env:SWEETY_DEMO_EMAIL = 'sweety-demo@example.invalid'
+$env:SWEETY_DEMO_PASSWORD = '<choose a private local demo password>'
+npm run db:seed
+Remove-Item Env:SWEETY_SEED_DEMO_DATA, Env:SWEETY_DEMO_EMAIL, Env:SWEETY_DEMO_PASSWORD
+```
+
+Run from `server/`. The default fictional email is `sweety-demo@example.invalid`. The demo password is local-only and must not be committed or reused. Existing demo account passwords are not changed by rerunning the script. The final audit seeded five fictional rows, and a second run inserted zero rows. The seeded sample account remains in the local development database; it is not a hosted account.
 
 ## API reference
 
@@ -161,12 +195,14 @@ From `client/`:
 npm run lint
 npm test
 npm run build
+npm audit
 ```
 
 From `server/`:
 
 ```powershell
 npm test
+npm audit
 ```
 
 The regular backend suite mocks Prisma. To run the separately configured real HTTP/PostgreSQL integration test, start PostgreSQL and the API first, then run from `server/`:
@@ -181,7 +217,7 @@ Remove-Item Env:SWEETY_API_BASE_URL
 
 This opt-in test refuses non-local targets and any database except `sweety_db`. It creates one random synthetic account, exercises real HTTP requests and database-backed records, then removes only the tracked records for that account. Do not use it against production or a shared database.
 
-Frontend tests mock API responses and cover auth forms/session routing, readings behavior, report selection/statistics, and date helpers. The normal backend suite mocks Prisma. Stage 8 passed 23 frontend and 55 backend tests, client lint, and build. Stage 9 added a separately configured, explicit opt-in database-backed HTTP integration test; it is not included in `npm test`. The real database/API run passed 89 scenario assertions, and the retained integration test passed 1 test. See Stage 9 results below. The npm registry initially returned `ENOTFOUND` from the normal sandbox; npm uses the official registry and no npm or HTTP proxy is configured. With approved network access, npm 10.9.2 then hit an Arborist peer-resolution error on the original Vitest 4 declaration. Aligning the client to Vitest 5.1.2 (the existing backend runner, compatible with Vite 8 and Node 22.13.1) resolved installation. A clean `npm ci` confirmed reproducibility and `npm audit` reported zero vulnerabilities. Stage 8 did not run Prisma or PostgreSQL operations.
+Frontend tests mock API responses and cover auth forms/session routing, readings behavior, report selection/statistics, and date helpers. The normal backend suite mocks Prisma. Stage 8 passed 23 frontend and 55 backend tests, client lint, and build. Stage 9 added a separately configured, explicit opt-in database-backed HTTP integration test; it is not included in `npm test`. The real database/API run passed 89 scenario assertions, and the retained integration test passed 1 test. See Stage 9 results below. The npm registry initially returned `ENOTFOUND` from the normal sandbox; npm uses the official registry and no npm or HTTP proxy is configured. With approved network access, npm 10.9.2 then hit an Arborist peer-resolution error on the original Vitest 4 declaration. Aligning the client to Vitest 5.1.2 (the existing backend runner, compatible with Vite 8 and Node 22.13.1) resolved installation. A clean `npm ci` confirmed reproducibility. Stage 10's final client/server `npm audit` each reported zero vulnerabilities after a server dependency correction.
 
 The current production build is 343.24 kB JavaScript (109.81 kB gzip) and 14.57 kB CSS (4.05 kB gzip). Compared with the earlier Stage 8 build, JavaScript is unchanged; CSS increased 0.07 kB and gzip 0.01 kB for contrast and touch-target refinements. No pre-Stage 8 bundle baseline was retained.
 
@@ -189,7 +225,7 @@ The current production build is 343.24 kB JavaScript (109.81 kB gzip) and 14.57 
 
 Login and registration were rendered in the browser at 320, 375, 390, 768, 1024, and 1440px. Each reported `documentElement.scrollWidth` equal to the viewport width, and all visible auth fields/buttons stayed within the viewport. Mobile and desktop screenshots were inspected. Auth pages' field labels, keyboard focus outline, password visibility toggle, and empty-field validation were checked. Sampled text contrast on white and the auth side-panel background measured at least 4.67:1 after refinements. This was a practical check, not a formal WCAG audit.
 
-At the time of Stage 8 verification, Vite listened on IPv6 loopback `::1:5173`: `http://localhost:5173/login` returned HTTP 200; `127.0.0.1:5173` was not bound. During Stage 9, the registration page opened at the same localhost origin. Full authenticated workflows and responsive checks for readings/reports were not completed: the available Windows Computer Use bridge stopped when it could not establish the active browser URL with sufficient confidence. Do not treat the API integration tests as browser verification.
+At the time of Stage 8 verification, Vite listened on IPv6 loopback `::1:5173`: `http://localhost:5173/login` returned HTTP 200; `127.0.0.1:5173` was not bound. Stage 10 opened the actual registration and login pages, exercised the authenticated readings and reports UI against the running Express/PostgreSQL services, refreshed a signed-in session, tested logout/protected-route redirection, and measured responsive document widths at six viewport sizes. These are separate browser checks from the API integration test.
 
 ### Stage 9 PostgreSQL and API integration results
 
@@ -201,7 +237,8 @@ At the time of Stage 8 verification, Vite listened on IPv6 loopback `::1:5173`: 
 - Synthetic report data used disposable values only. For 2026-11-20, `90, 110, 130, 150` produced daily `high 150 / low 90 / average 120 / count 4`. Month-to-date through Nov 20 included a Nov 10 value of `70` and returned `150 / 70 / 110 / 5`; Oct 1 and Oct 31 values `80, 160` returned previous-month `160 / 80 / 120 / 2`. After updating `110 → 120`, daily average was `122.5`; after deleting `130`, it was `120 / count 3`. Empty periods returned null high/low/average and count 0. February 2024 leap day and January-to-December year rollover boundaries passed.
 - Express was stopped and restarted. The test account could log in afterward, its 10 remaining readings and report statistics were still available, and Prisma reconnected to the same records. Stage 9 test users/readings were then removed by exact IDs; post-cleanup counts confirmed only the pre-existing user remained.
 - A reusable opt-in real database HTTP test is available as `npm run test:integration` from `server/`. Start the local API first, then set `SWEETY_INTEGRATION_TESTS=1` and `SWEETY_API_BASE_URL=http://127.0.0.1:5000/api`. It refuses non-loopback targets or a database other than `sweety_db`, uses one random synthetic account, and deletes only that account and its tracked readings. Do not run against production or shared databases.
-- Browser registration was opened, but registration submission, login/session restoration, authenticated readings/reports workflows, six-width authenticated responsiveness, keyboard/touch interactions, and visual loading/error/empty states remain unverified. The Windows Computer Use bridge stopped due to an inability to determine the active browser URL. Stage 9 is therefore **PARTIAL PASS**; do not mark end-to-end browser acceptance complete.
+- Stage 9 originally left browser checks incomplete because the browser bridge could not identify its active URL. Stage 10 resolved that limitation with an in-app browser. Real registration (including invalid inputs and duplicate email), login/invalid credentials, refresh/session restoration, readings create/update/delete, daily/month-to-date/previous-month summaries, logout, and protected-route redirect passed against the local app. Report aggregates matched the seeded fixture. A session-token tampering check was not performed through the browser's read-only page API; backend tests cover invalid/expired tokens. Readings and reports had no horizontal overflow at 320, 375, 390, 768, 1024, or 1440px. Four screenshots were saved under `docs/screenshots/` (login, readings dashboard, desktop report, mobile report); no demo video was recorded.
+- Stage 10 seeded a fictional demo account with five sample readings and reran the seed: the second run inserted zero. Final local counts were two users (one pre-existing plus the demo user) and five readings; the distinct browser-test account was removed by exact email/name/user ID and no test readings remained. `npm audit` reported zero vulnerabilities in both client and server. The server audit correction moves Prisma CLI to devDependencies, replaces nodemon with Node 22's built-in `--watch`, and overrides `@prisma/config`'s vulnerable transitive `effect` to patched 3.22.1; Prisma remains 7.10.1.
 
 Authenticated responsive results (not run):
 
@@ -210,13 +247,24 @@ Authenticated responsive results (not run):
 | Readings | Not verified | Not verified | Not verified | Not verified | Not verified | Not verified |
 | Reports | Not verified | Not verified | Not verified | Not verified | Not verified | Not verified |
 
+### Stage 10 final verification
+
+- Client: 23/23 tests, ESLint, and production build passed; build remains 343.24 kB JS (109.81 kB gzip) and 14.57 kB CSS (4.05 kB gzip).
+- Server: 55/55 mocked tests and 1/1 PostgreSQL integration test passed. Prisma validation, client generation (7.10.1), read-only DB verification, and migration status passed; the one existing migration is up to date.
+- Dependency review: `npm audit` reported 0 vulnerabilities for client and server. The server lockfile no longer resolves the vulnerable nodemon/minimatch chain; `effect` resolves to 3.22.1.
+- Browser: successful registration, duplicate rejection, invalid login feedback, valid demo login, restored session after refresh, reading create/update/delete, three report periods, logout, and protected-route redirect. Readings and reports had no horizontal overflow at 320, 375, 390, 768, 1024, or 1440px. Invalid-token manipulation in the browser was not performed.
+- Submission evidence: `docs/screenshots/01-login.png`, `02-readings-dashboard.png`, `03-reports-desktop.png`, and `04-reports-mobile.png` are captured from the real local application and reviewed. No demo video was recorded. Clean-machine setup was not independently verified in a separate environment, but the README setup steps were checked against the available scripts.
+- Repository: `https://github.com/AbhiMali05/kenpath-sweety`, branch `main`, latest committed code `aa6ebac`. An unauthenticated GitHub API request returned 404, so public visibility/access could not be verified; ensure Kenpath reviewers have access. Stage 10 changes are uncommitted and unpushed pending developer review.
+- Readiness: the application checks pass. Submission is pending the Stage 10 commit/push and confirmation that Kenpath reviewers can access the repository. A separate clean-machine install and browser token tampering were not performed; those are documented confidence gaps, not application blockers (the backend/API token tests passed).
+
 ## Security and known limitations
 
 - Passwords are bcrypt-hashed server-side and are not persisted in browser storage.
 - JWTs are stored in `sessionStorage` for the current tab session. `sessionStorage` is readable by browser JavaScript, so an XSS vulnerability could expose a stored token; this assessment does not redesign that architecture.
 - Frontend validation improves feedback; backend validation and authorization remain authoritative.
 - This application is not intended for real health-data or clinical use. It provides no diagnoses, risk classifications, or medical recommendations.
-- Authenticated browser workflows and responsive readings/reports checks remain unverified after Stage 9. Real PostgreSQL, Prisma migration state, API behavior, persistence, report calculations, and user data isolation were verified as documented above. This is not full browser end-to-end acceptance.
+- Browser token tampering was not verified through the browser API; invalid/expired token behavior is covered by backend tests and real HTTP integration assertions.
+- Four screenshots are included under `docs/screenshots/`; no demo video is included.
 
 ## Implementation roadmap and status
 
@@ -232,10 +280,10 @@ The stage names below were cross-checked against the retained stage prompts. His
 | 6 | React frontend foundation, routing, layout and API configuration | Implemented; browser verification pending |
 | 7 | Frontend auth, readings and reports features | Implemented; previous client lint/build and 55 mocked backend tests were recorded; live integration pending |
 | 8 | UI/UX refinement, responsive/accessibility audit, frontend tests and code quality | **Complete for Stage 8.** 23 frontend and 55 backend tests pass; lint/build pass; login/register checked at six widths. Protected page browser checks are deferred to Stage 9. |
-| 9 | Local PostgreSQL and Prisma migration verification, real API/UI integration, user data isolation, end-to-end workflow | **PARTIAL PASS.** PostgreSQL, existing migration state, API, reports, isolation, persistence, opt-in integration test, and regressions passed. Browser workflows and authenticated responsive layouts remain unverified. |
-| 10 | Final assignment audit, remaining fixes, final documentation, readiness and interview preparation | Upcoming; not started |
+| 9 | Local PostgreSQL and Prisma migration verification, real API/UI integration, user data isolation, end-to-end workflow | **PASS WITH LIMITATION.** Database, API, persistence, isolation and responsive browser workflows passed. Browser-side invalid/expired token manipulation remains unverified; API coverage passed. |
+| 10 | Final assignment audit, remaining fixes, final documentation, readiness and interview preparation | **Complete; commit/push and reviewer-access confirmation pending.** Regression, seed, dependency, browser, screenshot, docs, and requirements audits passed. A separate clean-environment setup was not run. |
 
-Do not call the project submission-ready until real PostgreSQL integration and final assignment verification are complete.
+Current verdict: **READY FOR SUBMISSION after the Stage 10 commit/push and repository-access check.** A clean-machine setup run was not performed and is not treated as a blocker; browser invalid/expired token behavior passed at the API/backend level. Repository visibility was not changed.
 
 ## Future scope (not part of current stages)
 
@@ -243,13 +291,22 @@ Possible later enhancements include pagination, historical charts, Docker Compos
 
 ## Submission checklist
 
-- [ ] Required workflows verified end to end in the browser
+- [x] Core required workflows verified end to end in the browser; invalid-token manipulation was not performed in-browser
 - [x] Real PostgreSQL integration and user data isolation verified through API checks
 - [x] Backend and frontend mocked tests pass
-- [ ] Setup commands verified on a clean environment
-- [ ] Safe environment examples and no committed credentials
-- [ ] Seed script/demo data and demo assets reviewed against final assignment requirements
-- [ ] Final assignment audit complete
+- [ ] Setup commands tested on a separate clean environment (optional confidence check; not a blocker)
+- [x] Safe environment examples and no committed credentials (reviewed)
+- [x] Seed script and fictional local demo data verified; four screenshots included, demo video not recorded
+- [x] Final assignment audit complete with documented limitations
+
+## Screenshots
+
+These screenshots were captured from the working local application using the fictional demo account:
+
+- [Login page](docs/screenshots/01-login.png)
+- [Readings dashboard with four sample values](docs/screenshots/02-readings-dashboard.png)
+- [Desktop daily report](docs/screenshots/03-reports-desktop.png)
+- [Mobile daily report](docs/screenshots/04-reports-mobile.png)
 
 ## Repository rights
 
